@@ -1,6 +1,6 @@
 /* **************************************************************************
  * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
- *
+  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -29,8 +29,19 @@
 #include "rocblas.hpp"
 
 #include <memory>
+#include <unordered_map>
+#include <mutex>
 
 ROCSOLVER_BEGIN_NAMESPACE
+
+// Thread-safe map to store rocsolver handle data per rocblas_handle
+struct rocsolver_handle_wrapper
+{
+    std::shared_ptr<rocsolver_handle_data_> data;
+};
+
+static std::unordered_map<rocblas_handle, rocsolver_handle_wrapper> handle_map;
+static std::mutex handle_map_mutex;
 
 rocblas_status rocsolver_set_alg_mode_impl(rocblas_handle handle,
                                            const rocsolver_function func,
@@ -41,23 +52,14 @@ rocblas_status rocsolver_set_alg_mode_impl(rocblas_handle handle,
     if(mode == rocsolver_alg_mode_mixed)
         return rocblas_status_invalid_value;
 
-    std::shared_ptr<void> handle_ptr;
-    ROCBLAS_CHECK(rocblas_internal_get_data_ptr(handle, handle_ptr));
-    rocsolver_handle_data handle_data = (rocsolver_handle_data)handle_ptr.get();
+    std::lock_guard<std::mutex> lock(handle_map_mutex);
 
-    if(handle_data == nullptr)
-    {
-        handle_ptr = std::make_shared<rocsolver_handle_data_>();
-        handle_data = (rocsolver_handle_data)handle_ptr.get();
-        handle_data->checksum = sizeof(rocsolver_handle_data_);
+    auto& wrapper = handle_map[handle];
+    if(!wrapper.data)
+        wrapper.data = std::make_shared<rocsolver_handle_data_>();
 
-        ROCBLAS_CHECK(rocblas_internal_set_data_ptr(handle, handle_ptr));
-    }
-    else
-    {
-        if(handle_data->checksum != sizeof(rocsolver_handle_data_))
-            return rocblas_status_internal_error;
-    }
+    rocsolver_handle_data handle_data = wrapper.data.get();
+    handle_data->checksum = sizeof(rocsolver_handle_data_);
 
     switch(func)
     {
@@ -68,18 +70,21 @@ rocblas_status rocsolver_set_alg_mode_impl(rocblas_handle handle,
             handle_data->bdsqr_mode = mode;
             return rocblas_status_success;
         }
+        break;
     case rocsolver_function_sterf:
         if(mode == rocsolver_alg_mode_gpu || mode == rocsolver_alg_mode_hybrid)
         {
             handle_data->sterf_mode = mode;
             return rocblas_status_success;
         }
+        break;
     case rocsolver_function_steqr:
         if(mode == rocsolver_alg_mode_gpu || mode == rocsolver_alg_mode_hybrid)
         {
             handle_data->steqr_mode = mode;
             return rocblas_status_success;
         }
+        break;
     case rocsolver_function_syev_heev:
         if(mode == rocsolver_alg_mode_gpu || mode == rocsolver_alg_mode_hybrid)
         {
@@ -87,6 +92,9 @@ rocblas_status rocsolver_set_alg_mode_impl(rocblas_handle handle,
             handle_data->steqr_mode = mode;
             return rocblas_status_success;
         }
+        break;
+    default:
+        return rocblas_status_invalid_value;
     }
 
     return rocblas_status_invalid_value;
@@ -96,36 +104,43 @@ rocblas_status rocsolver_get_alg_mode_impl(rocblas_handle handle,
                                            const rocsolver_function func,
                                            rocsolver_alg_mode* mode)
 {
-    if(!handle)
+    if(!handle || !mode)
         return rocblas_status_invalid_handle;
 
-    std::shared_ptr<void> handle_ptr;
-    ROCBLAS_CHECK(rocblas_internal_get_data_ptr(handle, handle_ptr));
-    rocsolver_handle_data handle_data = (rocsolver_handle_data)handle_ptr.get();
+    std::lock_guard<std::mutex> lock(handle_map_mutex);
 
-    if(handle_data == nullptr)
+    auto it = handle_map.find(handle);
+    if(it == handle_map.end() || !it->second.data)
     {
-        *mode = rocsolver_alg_mode_gpu;
+        *mode = rocsolver_alg_mode_gpu; // default
+        return rocblas_status_success;
     }
-    else
-    {
-        if(handle_data->checksum != sizeof(rocsolver_handle_data_))
-            return rocblas_status_internal_error;
 
-        switch(func)
-        {
-        case rocsolver_function_gesvd:
-        case rocsolver_function_bdsqr: *mode = handle_data->bdsqr_mode; break;
-        case rocsolver_function_sterf: *mode = handle_data->sterf_mode; break;
-        case rocsolver_function_steqr: *mode = handle_data->steqr_mode; break;
-        case rocsolver_function_syev_heev:
-            if(handle_data->sterf_mode == handle_data->steqr_mode)
-                *mode = handle_data->sterf_mode;
-            else
-                *mode = rocsolver_alg_mode_mixed;
-            break;
-        default: return rocblas_status_invalid_value;
-        }
+    rocsolver_handle_data handle_data = it->second.data.get();
+
+    if(handle_data->checksum != sizeof(rocsolver_handle_data_))
+        return rocblas_status_internal_error;
+
+    switch(func)
+    {
+    case rocsolver_function_gesvd:
+    case rocsolver_function_bdsqr:
+        *mode = handle_data->bdsqr_mode;
+        break;
+    case rocsolver_function_sterf:
+        *mode = handle_data->sterf_mode;
+        break;
+    case rocsolver_function_steqr:
+        *mode = handle_data->steqr_mode;
+        break;
+    case rocsolver_function_syev_heev:
+        if(handle_data->sterf_mode == handle_data->steqr_mode)
+            *mode = handle_data->sterf_mode;
+        else
+            *mode = rocsolver_alg_mode_mixed;
+        break;
+    default:
+        return rocblas_status_invalid_value;
     }
 
     return rocblas_status_success;
@@ -158,4 +173,5 @@ catch(...)
 {
     return rocsolver::exception_to_rocblas_status();
 }
-}
+
+} // extern "C"

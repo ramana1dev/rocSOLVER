@@ -79,6 +79,31 @@ struct formatter<rocsolver_logvalue<bool>> : formatter<char>
     }
 };
 
+// gecon enum → "1"/"inf"
+template <>
+struct formatter<rocsolver_logvalue<rocblas_gecon_e>> : formatter<string_view>
+{
+    template <typename FormatCtx>
+    auto format(rocsolver_logvalue<rocblas_gecon_e> wrapper, FormatCtx& ctx) ROCSOLVER_FMT_CONST
+    {
+        // helpers live in namespace rocsolver
+        return formatter<string_view>::format(
+            rocsolver::rocblas2char_gecon_e(wrapper.value), ctx);
+    }
+};
+
+// norm enum → "inf"/"1"/"fro"/"max"
+template <>
+struct formatter<rocsolver_logvalue<rocblas_norm>> : formatter<string_view>
+{
+    template <typename FormatCtx>
+    auto format(rocsolver_logvalue<rocblas_norm> wrapper, FormatCtx& ctx) ROCSOLVER_FMT_CONST
+    {
+        return formatter<string_view>::format(
+            rocsolver::rocblas2char_norm(wrapper.value), ctx);
+    }
+};
+
 template <>
 struct formatter<rocsolver_logvalue<rocblas_operation>> : formatter<char>
 {

@@ -103,6 +103,31 @@ typedef enum rocblas_eform_
     rocblas_eform_bax = 223, /**< The problem is \f$BAx = \lambda x\f$. */
 } rocblas_eform;
 
+/*! \brief Norm types used to specify the matrix or vector norm.
+ *
+ *  These enums are used in routines that require a norm calculation,
+ *  such as condition number estimation. They follow the same convention
+ *  as BLAS/LAPACK:
+ *
+ *   - rocblas_inf_norm      → ∞-norm (maximum absolute row sum)
+ *   - rocblas_one_norm      → 1-norm (maximum absolute column sum)
+ *   - rocblas_fro_norm      → Frobenius norm (square root of sum of squares)
+ *   - rocblas_max_norm      → max norm (maximum absolute value of elements)
+ */
+typedef enum rocblas_norm_
+{
+    rocblas_inf_norm = 0,   /**< ∞-norm (maximum absolute row sum) */
+    rocblas_one_norm = 1,   /**< 1-norm (maximum absolute column sum) */
+    rocblas_fro_norm = 2,   /**< Frobenius norm (sqrt of sum of squares) */
+    rocblas_max_norm = 3    /**< Max norm (maximum absolute value of elements) */
+} rocblas_norm;
+
+typedef enum rocblas_gecon_e_
+{
+    rocsolver_gecon_1,   // 1-norm
+    rocsolver_gecon_inf  // inf-norm
+} rocblas_gecon_e;
+
 /*! \brief Used to specify the type of range in which eigenvalues will be found
  *in partial eigenvalue decompositions
  ********************************************************************************/

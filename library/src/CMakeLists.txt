@@ -31,6 +31,8 @@ set(package_targets rocsolver)
 set(rocsolver_lapack_source
   #### Linear Systems Solvers ####
   ################################
+  #- GECON
+  lapack/roclapack_gecon.cpp
   #- general inverse
   lapack/roclapack_getri.cpp
   lapack/roclapack_getri_batched.cpp

@@ -463,6 +463,24 @@ constexpr rocsolver_rfinfo_mode char2rocsolver_rfinfo_mode(char value)
     }
 }
 
+inline const char* rocblas2char_norm(rocblas_norm v) {
+    switch(v) {
+    case rocblas_inf_norm: return "inf";
+    case rocblas_one_norm: return "1";
+    case rocblas_fro_norm: return "fro";
+    case rocblas_max_norm: return "max";
+    default: return "invalid";
+    }
+}
+
+inline const char* rocblas2char_gecon_e(rocblas_gecon_e v) {
+    switch(v) {
+    case rocsolver_gecon_1:  return "1";
+    case rocsolver_gecon_inf:return "inf";
+    default: return "invalid";
+    }
+}
+
 #undef ROCSOLVER_ROCBLAS_HAS_F8_DATATYPES
 
 #ifdef ROCSOLVER_LIBRARY

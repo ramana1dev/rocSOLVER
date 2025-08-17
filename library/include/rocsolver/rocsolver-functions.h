@@ -29453,6 +29453,92 @@ ROCSOLVER_EXPORT rocblas_status rocsolver_zhegvdx_strided_batched(rocblas_handle
                                                                   const rocblas_int batch_count);
 //! @}
 
+/*! @{
+    \brief GECON estimates the reciprocal of the condition number of a general
+    matrix A in either the 1-norm or the infinity-norm, using the LU factorization
+    computed by GETRF.
+
+    \details
+    The reciprocal condition number is given by
+
+        rcond = 1 / (||A|| * ||A^{-1}||)
+
+    where norm can be the 1-norm or infinity-norm.
+
+    @param[in]
+    handle      rocblas_handle.
+    @param[in]
+    norm_type   rocblas_norm.
+                Specifies whether the 1-norm or infinity-norm is used.
+    @param[in]
+    n           rocblas_int. n >= 0.
+                The order of the matrix A.
+    @param[in]
+    A           pointer to type. Array on the GPU of dimension lda*n.
+                The original matrix A.
+    @param[in]
+    lda         rocblas_int. lda >= n.
+                The leading dimension of A.
+    @param[in]
+    LU          pointer to type. Array on the GPU of dimension lda*n.
+                The LU factorization of A as returned by GETRF.
+    @param[out]
+    rcond       pointer to real type on the GPU.
+                The estimated reciprocal condition number.
+    @param[out]
+    work        pointer to workspace array on the GPU.
+    @param[out]
+    info        pointer to rocblas_int on the GPU.
+                = 0: successful exit
+                < 0: if info = -i, the i-th parameter had an illegal value.
+                > 0: estimation did not converge.
+************************************************************************/
+
+/* Single precision real */
+ROCSOLVER_EXPORT rocblas_status rocsolver_sgecon(rocblas_handle handle,
+                                                 const rocblas_norm norm_type,
+                                                 const rocblas_int n,
+                                                 float* A,
+                                                 const rocblas_int lda,
+                                                 const float* anorm,   // <-- scalar input (host or device per convention)
+                                                 float* rcond,         // <-- scalar output
+                                                 float* work,          // <-- workspace (real)
+                                                 rocblas_int* info);
+
+/* Double precision real */
+ROCSOLVER_EXPORT rocblas_status rocsolver_dgecon(rocblas_handle handle,
+                                                 const rocblas_norm norm_type,
+                                                 const rocblas_int n,
+                                                 double* A,
+                                                 const rocblas_int lda,
+                                                 const double* anorm,
+                                                 double* rcond,
+                                                 double* work,
+                                                 rocblas_int* info);
+
+/* Single precision complex */
+ROCSOLVER_EXPORT rocblas_status rocsolver_cgecon(rocblas_handle handle,
+                                                 const rocblas_norm norm_type,
+                                                 const rocblas_int n,
+                                                 rocblas_float_complex* A,
+                                                 const rocblas_int lda,
+                                                 const float* anorm,    // real scalar for complex
+                                                 float* rcond,          // real scalar for complex
+                                                 rocblas_float_complex* work,           // real workspace (matches template T)
+                                                 rocblas_int* info);
+
+/* Double precision complex */
+ROCSOLVER_EXPORT rocblas_status rocsolver_zgecon(rocblas_handle handle,
+                                                 const rocblas_norm norm_type,
+                                                 const rocblas_int n,
+                                                 rocblas_double_complex* A,
+                                                 const rocblas_int lda,
+                                                 const double* anorm,
+                                                 double* rcond,
+                                                 rocblas_double_complex* work,
+                                                 rocblas_int* info);
+//! @}
+
 #ifdef __cplusplus
 }
 #endif
